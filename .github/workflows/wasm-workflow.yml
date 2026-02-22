@@ -18,8 +18,10 @@ jobs:
       - name: Install uv
         run: python3 -m pip install uv
 
-      - name: Setup CMake
-        uses: lukka/get-cmake@latest
+      - name: Install CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
 
       - name: Update nightly version
         if: ${{ inputs.isNightly == true }}
@@ -37,21 +39,48 @@ jobs:
         run: npm i
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: 'latest'
+        run: |
+          if [ ! -d /home/runner/emsdk ]; then
+            git clone https://github.com/emscripten-core/emsdk.git /home/runner/emsdk
+          fi
+          cd /home/runner/emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
 
       - name: Verify Emscripten
-        run: emcc -v
+        run: |
+          source /home/runner/emsdk/emsdk_env.sh
+          emcc -v
 
-      - name: Setup ccache
+      - name: Install ccache
+        run: |
+          sudo apt-get install -y ccache
+
+      - name: Setup ccache (package)
+        if: ${{ inputs.isNightly != true }}
         uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: wasm-${{ runner.os }}-${{ github.ref }}
+          key: wasm-package-${{ runner.os }}-${{ github.ref }}
           max-size: 2G
           restore-keys: |
-            wasm-${{ runner.os }}-refs/heads/master
-            wasm-${{ runner.os }}-
+            wasm-package-${{ runner.os }}-refs/heads/master
+            wasm-package-${{ runner.os }}-
+
+      - name: Setup ccache (test)
+        if: ${{ inputs.isNightly == true }}
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: wasm-test-${{ runner.os }}-${{ github.ref }}
+          max-size: 2G
+          restore-keys: |
+            wasm-test-${{ runner.os }}-refs/heads/master
+            wasm-test-${{ runner.os }}-
+
+      - name: Configure ccache for Emscripten
+        run: |
+          ccache --set-config=compiler_check=content
+          ccache --set-config=hash_dir=false
+          ccache --set-config=base_dir=${{ github.workspace }}
 
       - name: Build WebAssembly package
         working-directory: tools/wasm
@@ -59,6 +88,7 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
+          source /home/runner/emsdk/emsdk_env.sh
           npm run build
 
       - uses: actions/upload-artifact@v4
@@ -70,32 +100,52 @@ jobs:
         working-directory: tools/wasm
         run: npm run test
 
-      - name: Clean up
-        run: make clean
-
-      - name: Kernel build & test
+      - name: Kernel build
+        if: ${{ inputs.isNightly == true }}
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
           source /home/runner/emsdk/emsdk_env.sh
-          make wasmtest
+          make wasmtest-build
 
-      - name: Kernel build & test in memory
+      - name: Kernel test
+        if: ${{ inputs.isNightly == true }}
+        run: ctest --test-dir build/wasm/test/ --output-on-failure -j ${TEST_JOBS} --timeout 600
+
+      - name: Kernel test (in memory)
+        if: ${{ inputs.isNightly == true }}
         env:
-          CMAKE_C_COMPILER_LAUNCHER: ccache
-          CMAKE_CXX_COMPILER_LAUNCHER: ccache
           IN_MEM_MODE: true
+        run: ctest --test-dir build/wasm/test/ --output-on-failure -j ${TEST_JOBS} --timeout 600
+
+      - name: Clean up for single-threaded build
+        if: ${{ inputs.isNightly == true }}
+        run: make clean CMAKE=/usr/bin/cmake
+
+      - name: Setup ccache (single-threaded)
+        if: ${{ inputs.isNightly == true }}
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: wasm-test-single-${{ runner.os }}-${{ github.ref }}
+          max-size: 2G
+          restore-keys: |
+            wasm-test-single-${{ runner.os }}-refs/heads/master
+            wasm-test-single-${{ runner.os }}-
+
+      - name: Configure ccache for single-threaded build
+        if: ${{ inputs.isNightly == true }}
         run: |
-          source /home/runner/emsdk/emsdk_env.sh
-          make wasmtest
+          ccache --set-config=compiler_check=content
+          ccache --set-config=hash_dir=false
+          ccache --set-config=base_dir=${{ github.workspace }}
 
       - name: Kernel build & test (single-threaded)
+        if: ${{ inputs.isNightly == true }}
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
           SINGLE_THREADED: true
         run: |
-          make clean
           source /home/runner/emsdk/emsdk_env.sh
           make wasmtest

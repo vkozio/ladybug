@@ -9,7 +9,7 @@
 	java_native_header java javatest \
 	nodejs nodejstest \
 	python python-debug pytest pytest-debug \
-	wasm wasmtest \
+	wasm wasmtest wasmtest-build \
 	rusttest \
 	benchmark example \
 	extension-test-build extension-test extension-json-test-build extension-json-test \
@@ -112,6 +112,13 @@ ifdef BM_MALLOC
 	CMAKE_FLAGS += -DENABLE_MALLOC_BUFFER_MANAGER=$(BM_MALLOC)
 endif
 
+ifdef CMAKE_C_COMPILER_LAUNCHER
+	CMAKE_FLAGS += -DCMAKE_C_COMPILER_LAUNCHER=$(CMAKE_C_COMPILER_LAUNCHER)
+endif
+ifdef CMAKE_CXX_COMPILER_LAUNCHER
+	CMAKE_FLAGS += -DCMAKE_CXX_COMPILER_LAUNCHER=$(CMAKE_CXX_COMPILER_LAUNCHER)
+endif
+
 release:
 	$(call run-cmake-release,)
 
@@ -211,11 +218,13 @@ wasm:
 	emcmake cmake $(CMAKE_FLAGS) -DCMAKE_BUILD_TYPE=$(call get-build-type,Release) -DBUILD_WASM=TRUE -DBUILD_BENCHMARK=FALSE -DBUILD_TESTS=FALSE -DBUILD_SHELL=FALSE  ../.. && \
 	cmake --build . --config $(call get-build-type,Release) -j $(NUM_THREADS)
 
-wasmtest:
+wasmtest-build:
 	mkdir -p build/wasm && cd build/wasm &&\
 	emcmake cmake $(CMAKE_FLAGS) -DCMAKE_BUILD_TYPE=$(call get-build-type,Release) -DBUILD_WASM=TRUE -DBUILD_BENCHMARK=FALSE -DBUILD_TESTS=TRUE -DBUILD_SHELL=FALSE  ../.. && \
-	cmake --build . --config $(call get-build-type,Release) -j $(NUM_THREADS) &&\
-	cd ../.. && ctest --test-dir  build/wasm/test/ --output-on-failure -j ${TEST_JOBS} --timeout 600
+	cmake --build . --config $(call get-build-type,Release) -j $(NUM_THREADS)
+
+wasmtest: wasmtest-build
+	ctest --test-dir build/wasm/test/ --output-on-failure -j ${TEST_JOBS} --timeout 600
 
 rusttest:
 ifeq ($(OS),Windows_NT)
@@ -336,17 +345,18 @@ install:
 
 
 # Cleaning
+CMAKE ?= cmake
 clean-extension:
-	cmake -E rm -rf extension/*/build
+	$(CMAKE) -E rm -rf extension/*/build
 
 clean-python-api:
-	cmake -E rm -rf tools/python_api/build
+	$(CMAKE) -E rm -rf tools/python_api/build
 
 clean-java:
-	cmake -E rm -rf tools/java_api/build
+	$(CMAKE) -E rm -rf tools/java_api/build
 
 clean: clean-extension clean-python-api clean-java
-	cmake -E rm -rf build
+	$(CMAKE) -E rm -rf build
 
 
 # Utils
