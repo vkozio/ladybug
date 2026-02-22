@@ -352,9 +352,9 @@ void ColumnReader::decompressInternal(lbug_parquet::format::CompressionCodec::ty
         // LCOV_EXCL_STOP
     } break;
     case CompressionCodec::ZSTD: {
-        auto res = lbug_zstd::ZSTD_decompress(dst, dstSize, src, srcSize);
+        auto res = ZSTD_decompress(dst, dstSize, src, srcSize);
         // LCOV_EXCL_START
-        if (lbug_zstd::ZSTD_isError(res) || res != (size_t)dstSize) {
+        if (ZSTD_isError(res) || res != (size_t)dstSize) {
             throw common::RuntimeException{"ZSTD decompression failed."};
         }
         // LCOV_EXCL_STOP
@@ -363,7 +363,7 @@ void ColumnReader::decompressInternal(lbug_parquet::format::CompressionCodec::ty
         brotliDecompress(dst, dstSize, src, srcSize);
     } break;
     case CompressionCodec::LZ4_RAW: {
-        auto res = lbug_lz4::LZ4_decompress_safe(reinterpret_cast<const char*>(src),
+        auto res = LZ4_decompress_safe(reinterpret_cast<const char*>(src),
             reinterpret_cast<char*>(dst), srcSize, dstSize);
         // LCOV_EXCL_START
         if (res != (int64_t)dstSize) {
