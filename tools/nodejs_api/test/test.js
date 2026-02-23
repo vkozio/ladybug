@@ -42,8 +42,5 @@ describe("lbug", () => {
   importTest("Synchronous API", path.join(__dirname, "test_sync_api.js"));
   importTest("registerStream / LOAD FROM stream", path.join(__dirname, "test_register_stream.js"));
   importTest("Resilience (close during/after use)", path.join(__dirname, "test_resilience.js"));
-  // Skip until core SIGSEGV in Schema::isExpressionInScope is fixed (see logs/call-subquery-segfault-analysis.md)
-  describe.skip("CALL subquery", () => {
-    require(path.join(__dirname, "test_call_subquery.js"));
-  });
+  importTest("CALL subquery", path.join(__dirname, "test_call_subquery.js"));
 });
