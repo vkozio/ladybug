@@ -55,6 +55,9 @@ void CallSubquery::mergeInnerResultsToResultSet(ExecutionContext* /*context*/,
     uint64_t numInnerRows) {
     const uint64_t numOutputRows = numInnerRows > 0 ? numInnerRows : 1;
     for (uint32_t group = 0; group < info.numOuterGroups; ++group) {
+        if (group >= resultSet->dataChunks.size() || !resultSet->dataChunks[group]) {
+            continue;
+        }
         auto chunk = resultSet->getDataChunk(group);
         for (uint32_t v = 0; v < chunk->getNumValueVectors(); ++v) {
             auto* vec = &chunk->getValueVectorMutable(v);
@@ -69,6 +72,10 @@ void CallSubquery::mergeInnerResultsToResultSet(ExecutionContext* /*context*/,
         const data_chunk_pos_t scopeChunkOffset = info.scopeOuterPositions.empty() ? 0 : 1;
         for (size_t i = 0; i < info.innerOutputPositions.size(); ++i) {
             auto& outPos = info.innerOutputPositions[i];
+            if (outPos.dataChunkPos >= resultSet->dataChunks.size() ||
+                !resultSet->dataChunks[outPos.dataChunkPos]) {
+                continue;
+            }
             auto* dstVec = resultSet->getValueVector(outPos).get();
             DataPos innerPos(outPos.dataChunkPos - info.numOuterGroups + scopeChunkOffset,
                 outPos.valueVectorPos);
@@ -84,6 +91,10 @@ void CallSubquery::mergeInnerResultsToResultSet(ExecutionContext* /*context*/,
         }
     } else if (!info.innerOutputPositions.empty()) {
         for (auto& outPos : info.innerOutputPositions) {
+            if (outPos.dataChunkPos >= resultSet->dataChunks.size() ||
+                !resultSet->dataChunks[outPos.dataChunkPos]) {
+                continue;
+            }
             auto* dstVec = resultSet->getValueVector(outPos).get();
             dstVec->setNull(0, true);
             auto dstChunk = resultSet->getDataChunk(outPos.dataChunkPos);
@@ -110,8 +121,7 @@ bool CallSubquery::getNextTuplesInternal(ExecutionContext* context) {
         bool gotInnerBatch = innerResultSet && children[1]->getNextTuple(context);
         uint64_t numInnerRows = 0;
         if (gotInnerBatch && !info.innerOutputPositions.empty()) {
-            const data_chunk_pos_t innerChunkIdx =
-                info.scopeOuterPositions.empty() ? 0 : 1;
+            const data_chunk_pos_t innerChunkIdx = info.scopeOuterPositions.empty() ? 0 : 1;
             auto chunk = innerResultSet->getDataChunk(innerChunkIdx);
             numInnerRows = chunk->state->getSelVector().getSelSize();
         } else if (gotInnerBatch) {

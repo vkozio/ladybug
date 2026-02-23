@@ -47,9 +47,10 @@ class LBUG_API TableFunctionCall final : public PhysicalOperator {
 public:
     TableFunctionCall(TableFunctionCallInfo info,
         std::shared_ptr<function::TableFuncSharedState> sharedState, uint32_t id,
-        std::unique_ptr<OPPrintInfo> printInfo)
+        std::unique_ptr<OPPrintInfo> printInfo, bool cloneUsesFreshSharedState = false)
         : PhysicalOperator{type_, id, std::move(printInfo)}, info{std::move(info)},
-          sharedState{std::move(sharedState)} {}
+          sharedState{std::move(sharedState)},
+          cloneUsesFreshSharedState{cloneUsesFreshSharedState} {}
 
     const TableFunctionCallInfo& getInfo() const { return info; }
     std::shared_ptr<function::TableFuncSharedState> getSharedState() const { return sharedState; }
@@ -67,12 +68,14 @@ public:
     double getProgress(ExecutionContext* context) const override;
 
     std::unique_ptr<PhysicalOperator> copy() override {
-        return std::make_unique<TableFunctionCall>(info.copy(), sharedState, id, printInfo->copy());
+        return std::make_unique<TableFunctionCall>(info.copy(), sharedState, id, printInfo->copy(),
+            true /* cloneUsesFreshSharedState */);
     }
 
 private:
     TableFunctionCallInfo info;
     std::shared_ptr<function::TableFuncSharedState> sharedState;
+    bool cloneUsesFreshSharedState = false;
     std::unique_ptr<function::TableFuncLocalState> localState = nullptr;
     std::unique_ptr<function::TableFuncInput> funcInput = nullptr;
     std::unique_ptr<function::TableFuncOutput> funcOutput = nullptr;

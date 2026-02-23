@@ -5,9 +5,13 @@
 namespace lbug {
 namespace planner {
 
+static bool isSchemaPointerValid(Schema* s) {
+    return s != nullptr;
+}
+
 void LogicalProjection::computeFactorizedSchema() {
     auto childSchema = children[0]->getSchema();
-    if (!childSchema) {
+    if (!isSchemaPointerValid(childSchema)) {
         createEmptySchema();
         return;
     }
@@ -46,7 +50,7 @@ void LogicalProjection::computeFactorizedSchema() {
 
 void LogicalProjection::computeFlatSchema() {
     auto childSchema = children[0]->getSchema();
-    if (!childSchema) {
+    if (!isSchemaPointerValid(childSchema)) {
         createEmptySchema();
         return;
     }
@@ -72,7 +76,11 @@ void LogicalProjection::computeFlatSchema() {
 }
 
 std::unordered_set<uint32_t> LogicalProjection::getDiscardedGroupsPos() const {
-    auto groupsPosInScopeBeforeProjection = children[0]->getSchema()->getGroupsPosInScope();
+    auto* childSchema = children[0]->getSchema();
+    if (!childSchema || !schema) {
+        return {};
+    }
+    auto groupsPosInScopeBeforeProjection = childSchema->getGroupsPosInScope();
     auto groupsPosInScopeAfterProjection = schema->getGroupsPosInScope();
     std::unordered_set<uint32_t> discardGroupsPos;
     for (auto i = 0u; i < schema->getNumGroups(); ++i) {

@@ -18,6 +18,9 @@ public:
 
     std::shared_ptr<LogicalOperator> getOuterChild() const { return getChild(0); }
     std::shared_ptr<LogicalOperator> getInnerChild() const { return getChild(1); }
+    // Schema that contains inner output columns (scope + RETURN). When inner root is ScopeScan,
+    // returns merged schema of ScopeScan and its child; otherwise inner root's schema.
+    Schema* getInnerOutputSchema() const;
     const binder::expression_vector& getScopeExpressions() const { return scopeExpressions; }
 
     void computeFlatSchema() override;
@@ -32,6 +35,7 @@ public:
 
 private:
     binder::expression_vector scopeExpressions;
+    mutable std::unique_ptr<Schema> cachedInnerOutputSchema;
 };
 
 } // namespace planner

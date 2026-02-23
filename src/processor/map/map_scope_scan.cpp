@@ -7,8 +7,7 @@ using namespace lbug::planner;
 namespace lbug {
 namespace processor {
 
-std::unique_ptr<PhysicalOperator> PlanMapper::mapScopeScan(
-    const LogicalOperator* logicalOperator) {
+std::unique_ptr<PhysicalOperator> PlanMapper::mapScopeScan(const LogicalOperator* logicalOperator) {
     auto& logicalScopeScan = logicalOperator->constCast<LogicalScopeScan>();
     KU_ASSERT(logicalScopeScan.getNumChildren() == 1);
     auto child = mapOperator(logicalScopeScan.getChild(0).get());

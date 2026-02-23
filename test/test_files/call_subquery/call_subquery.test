@@ -13,6 +13,6 @@
 2|b
 
 -CASE CallSubqueryEmptyInner
--STATEMENT CALL () { RETURN 1 AS c WHERE false } RETURN c
+-STATEMENT CALL () { MATCH (n:person) WHERE n.ID < 0 RETURN 1 AS c } RETURN c
 ---- 1
 |

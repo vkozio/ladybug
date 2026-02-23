@@ -20,6 +20,11 @@ std::string TableFunctionCallPrintInfo::toString() const {
 }
 
 void TableFunctionCall::initLocalStateInternal(ResultSet* resultSet, ExecutionContext* context) {
+    if (cloneUsesFreshSharedState) {
+        sharedState = info.function.initSharedStateFunc(
+            TableFuncInitSharedStateInput(info.bindData.get(), context));
+        cloneUsesFreshSharedState = false;
+    }
     auto initLocalStateInput =
         TableFuncInitLocalStateInput(*sharedState, *info.bindData, context->clientContext);
     localState = info.function.initLocalStateFunc(initLocalStateInput);

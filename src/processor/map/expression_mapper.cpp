@@ -48,10 +48,19 @@ static bool canEvaluateAsFunction(ExpressionType expressionType) {
     }
 }
 
+// Treat null or obviously invalid (e.g. 0x40 from corruption) schema as missing.
+static bool isSchemaValid(const planner::Schema* s) {
+    return s != nullptr && reinterpret_cast<uintptr_t>(s) >= 0x1000;
+}
+
 std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getEvaluator(
     std::shared_ptr<Expression> expression) {
-    if (schema == nullptr) {
-        return getConstantEvaluator(std::move(expression));
+    if (!isSchemaValid(schema)) {
+        if (ConstantExpressionVisitor::isConstant(*expression)) {
+            return getConstantEvaluator(std::move(expression));
+        }
+        throw NotImplementedException(
+            "Expression requires schema (schema missing or invalid in this context).");
     }
     auto expressionType = expression->expressionType;
     if (schema->isExpressionInScope(*expression)) {
@@ -114,7 +123,10 @@ std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getParameterEvaluator(
 
 std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getReferenceEvaluator(
     std::shared_ptr<Expression> expression) const {
-    KU_ASSERT(schema != nullptr);
+    if (!isSchemaValid(schema)) {
+        throw common::NotImplementedException(
+            "Reference evaluator requires valid schema (CALL subquery path?).");
+    }
     auto vectorPos = DataPos(schema->getExpressionPos(*expression));
     auto expressionGroup = schema->getGroup(expression->getUniqueName());
     return std::make_unique<ReferenceExpressionEvaluator>(std::move(expression),

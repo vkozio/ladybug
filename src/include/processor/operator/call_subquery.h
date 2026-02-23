@@ -19,17 +19,16 @@ struct CallSubqueryInfo {
         std::vector<DataPos> innerOutputPositions, uint32_t numOuterGroups,
         std::unique_ptr<ResultSetDescriptor> innerResultSetDescriptor)
         : scopeOuterPositions{std::move(scopeOuterPositions)},
-          innerOutputPositions{std::move(innerOutputPositions)},
-          numOuterGroups{numOuterGroups},
+          innerOutputPositions{std::move(innerOutputPositions)}, numOuterGroups{numOuterGroups},
           innerResultSetDescriptor{std::move(innerResultSetDescriptor)} {}
     EXPLICIT_COPY_DEFAULT_MOVE(CallSubqueryInfo);
 
 private:
     CallSubqueryInfo(const CallSubqueryInfo& other)
         : scopeOuterPositions{other.scopeOuterPositions},
-          innerOutputPositions{other.innerOutputPositions},
-          numOuterGroups{other.numOuterGroups},
-          innerResultSetDescriptor{other.innerResultSetDescriptor ? other.innerResultSetDescriptor->copy() : nullptr} {}
+          innerOutputPositions{other.innerOutputPositions}, numOuterGroups{other.numOuterGroups},
+          innerResultSetDescriptor{
+              other.innerResultSetDescriptor ? other.innerResultSetDescriptor->copy() : nullptr} {}
 };
 
 class LBUG_API CallSubquery final : public PhysicalOperator {

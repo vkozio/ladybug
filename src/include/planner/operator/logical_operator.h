@@ -111,6 +111,9 @@ public:
     Schema* getSchema() const {
         if (!schema) {
             const_cast<LogicalOperator*>(this)->computeFactorizedSchema();
+            if (!schema) {
+                const_cast<LogicalOperator*>(this)->createEmptySchema();
+            }
         }
         return schema.get();
     }

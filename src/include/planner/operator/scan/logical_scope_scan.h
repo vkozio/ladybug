@@ -19,8 +19,7 @@ public:
     const binder::expression_vector& getScopeExpressions() const { return scopeExpressions; }
 
     std::unique_ptr<LogicalOperator> copy() override {
-        return std::make_unique<LogicalScopeScan>(
-            binder::expression_vector{scopeExpressions});
+        return std::make_unique<LogicalScopeScan>(binder::expression_vector{scopeExpressions});
     }
 
 private:
