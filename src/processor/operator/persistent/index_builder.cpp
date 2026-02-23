@@ -140,8 +140,21 @@ static OptionalWarningSourceData getWarningDataFromChunks(
 void IndexBuilder::insert(const ColumnChunkData& chunk,
     const std::vector<ColumnChunkData*>& warningData, offset_t nodeOffset, offset_t numNodes,
     NodeBatchInsertErrorHandler& errorHandler) {
+    // SERIAL is stored as INT64; dispatch by logical type so SERIAL is handled as int64_t
+    // even if chunk's physical type were ever not INT64.
+    const auto& dataType = chunk.getDataType();
+    if (dataType.getLogicalTypeID() == LogicalTypeID::SERIAL) {
+        for (auto i = 0u; i < numNodes; i++) {
+            if (checkNonNullConstraint(chunk, warningData, nodeOffset, i, errorHandler)) {
+                auto value = chunk.getValue<int64_t>(i);
+                localBuffers.insert(value, nodeOffset + i,
+                    getWarningDataFromChunks(warningData, i), errorHandler);
+            }
+        }
+        return;
+    }
     TypeUtils::visit(
-        chunk.getDataType().getPhysicalType(),
+        dataType.getPhysicalType(),
         [&]<HashablePrimitive T>(T) {
             for (auto i = 0u; i < numNodes; i++) {
                 if (checkNonNullConstraint(chunk, warningData, nodeOffset, i, errorHandler)) {
