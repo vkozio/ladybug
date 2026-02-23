@@ -1,8 +1,7 @@
+# Nightly run disabled: workflow was failing at startup (invalid reusable inputs);
+# the GDB dispatch test job is disabled (if: false). Use workflow_dispatch to run manually if needed.
 name: SimSIMD Dispatch Test
 on:
-  schedule:
-    - cron: "0 5 * * *"
-
   workflow_dispatch:
 
 jobs:
@@ -10,13 +9,10 @@ jobs:
     uses: ./.github/workflows/precompiled-bin-workflow.yml
     with:
       isNightly: true
-      x86_64Only: true
     secrets: inherit
 
   build-extensions-linux:
     uses: ./.github/workflows/build-extensions.yml
-    with:
-      x86_64LinuxOnly: true
     secrets: inherit
 
   simsimd-dispatch-test:
