@@ -52,7 +52,7 @@ std::string FlatTuple::toString() const {
         if (i != 0) {
             result += "|";
         }
-        result += values[i].toString();
+        result += values[i].isNull() ? "|" : values[i].toString();
     }
     result += "\n";
     return result;
@@ -62,7 +62,7 @@ std::string FlatTuple::toString(const std::vector<uint32_t>& colsWidth,
     const std::string& delimiter, const uint32_t maxWidth) {
     std::ostringstream result;
     for (auto i = 0ul; i < values.size(); i++) {
-        auto value = values[i].toString();
+        auto value = values[i].isNull() ? "|" : values[i].toString();
         auto fieldLen = 0u;
         auto cutoff = 0u, cutoffLen = 0u;
         for (auto iter = 0u; iter < value.length();) {

@@ -68,17 +68,20 @@ void CallSubquery::mergeInnerResultsToResultSet(ExecutionContext* /*context*/,
         chunk->state->getSelVectorUnsafe().setToUnfiltered(numOutputRows);
         chunk->state->getSelVectorUnsafe().setSelSize(numOutputRows);
     }
-    if (numInnerRows > 0 && innerResultSet) {
-        const data_chunk_pos_t scopeChunkOffset = info.scopeOuterPositions.empty() ? 0 : 1;
+    if (numInnerRows > 0 && innerResultSet &&
+        info.innerReadPositions.size() == info.innerOutputPositions.size()) {
         for (size_t i = 0; i < info.innerOutputPositions.size(); ++i) {
             auto& outPos = info.innerOutputPositions[i];
+            auto& innerPos = info.innerReadPositions[i];
             if (outPos.dataChunkPos >= resultSet->dataChunks.size() ||
                 !resultSet->dataChunks[outPos.dataChunkPos]) {
                 continue;
             }
+            if (innerPos.dataChunkPos >= innerResultSet->dataChunks.size() ||
+                !innerResultSet->dataChunks[innerPos.dataChunkPos]) {
+                continue;
+            }
             auto* dstVec = resultSet->getValueVector(outPos).get();
-            DataPos innerPos(outPos.dataChunkPos - info.numOuterGroups + scopeChunkOffset,
-                outPos.valueVectorPos);
             auto* srcVec = innerResultSet->getValueVector(innerPos).get();
             auto srcChunk = innerResultSet->getDataChunk(innerPos.dataChunkPos);
             for (uint64_t r = 0; r < numInnerRows; ++r) {
@@ -123,9 +126,18 @@ bool CallSubquery::getNextTuplesInternal(ExecutionContext* context) {
         if (gotInnerBatch && !info.innerOutputPositions.empty()) {
             const data_chunk_pos_t innerChunkIdx = info.scopeOuterPositions.empty() ? 0 : 1;
             auto chunk = innerResultSet->getDataChunk(innerChunkIdx);
+            if (chunk->state->getSelVector().getSelSize() == 0) {
+                chunk->state->getSelVectorUnsafe().setToUnfiltered(1);
+                chunk->state->getSelVectorUnsafe().setSelSize(1);
+            }
             numInnerRows = chunk->state->getSelVector().getSelSize();
         } else if (gotInnerBatch) {
-            numInnerRows = innerResultSet->getDataChunk(0)->state->getSelVector().getSelSize();
+            auto chunk0 = innerResultSet->getDataChunk(0);
+            if (chunk0->state->getSelVector().getSelSize() == 0) {
+                chunk0->state->getSelVectorUnsafe().setToUnfiltered(1);
+                chunk0->state->getSelVectorUnsafe().setSelSize(1);
+            }
+            numInnerRows = chunk0->state->getSelVector().getSelSize();
         }
         if (numInnerRows > 0) {
             hasOutputForCurrentOuter = true;

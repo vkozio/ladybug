@@ -11,22 +11,25 @@ namespace processor {
 struct CallSubqueryInfo {
     std::vector<DataPos> scopeOuterPositions;
     std::vector<DataPos> innerOutputPositions;
+    std::vector<DataPos> innerReadPositions;
     uint32_t numOuterGroups = 0;
     std::unique_ptr<ResultSetDescriptor> innerResultSetDescriptor;
 
     CallSubqueryInfo() = default;
     CallSubqueryInfo(std::vector<DataPos> scopeOuterPositions,
-        std::vector<DataPos> innerOutputPositions, uint32_t numOuterGroups,
-        std::unique_ptr<ResultSetDescriptor> innerResultSetDescriptor)
+        std::vector<DataPos> innerOutputPositions, std::vector<DataPos> innerReadPositions,
+        uint32_t numOuterGroups, std::unique_ptr<ResultSetDescriptor> innerResultSetDescriptor)
         : scopeOuterPositions{std::move(scopeOuterPositions)},
-          innerOutputPositions{std::move(innerOutputPositions)}, numOuterGroups{numOuterGroups},
+          innerOutputPositions{std::move(innerOutputPositions)},
+          innerReadPositions{std::move(innerReadPositions)}, numOuterGroups{numOuterGroups},
           innerResultSetDescriptor{std::move(innerResultSetDescriptor)} {}
     EXPLICIT_COPY_DEFAULT_MOVE(CallSubqueryInfo);
 
 private:
     CallSubqueryInfo(const CallSubqueryInfo& other)
         : scopeOuterPositions{other.scopeOuterPositions},
-          innerOutputPositions{other.innerOutputPositions}, numOuterGroups{other.numOuterGroups},
+          innerOutputPositions{other.innerOutputPositions},
+          innerReadPositions{other.innerReadPositions}, numOuterGroups{other.numOuterGroups},
           innerResultSetDescriptor{
               other.innerResultSetDescriptor ? other.innerResultSetDescriptor->copy() : nullptr} {}
 };
