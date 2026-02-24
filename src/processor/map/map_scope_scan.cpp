@@ -10,7 +10,9 @@ namespace processor {
 std::unique_ptr<PhysicalOperator> PlanMapper::mapScopeScan(const LogicalOperator* logicalOperator) {
     auto& logicalScopeScan = logicalOperator->constCast<LogicalScopeScan>();
     KU_ASSERT(logicalScopeScan.getNumChildren() == 1);
+    setScopeSchemaForChild(logicalScopeScan.getSchema());
     auto child = mapOperator(logicalScopeScan.getChild(0).get());
+    setScopeSchemaForChild(nullptr);
     auto printInfo = std::make_unique<OPPrintInfo>();
     return std::make_unique<ScopeScan>(std::move(child), getOperatorID(), std::move(printInfo));
 }

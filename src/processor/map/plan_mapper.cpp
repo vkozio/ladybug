@@ -24,7 +24,9 @@ PlanMapper::PlanMapper(ExecutionContext* executionContext)
 std::unique_ptr<PhysicalPlan> PlanMapper::getPhysicalPlan(const LogicalPlan* logicalPlan,
     const expression_vector& expressions, main::QueryResultType resultType,
     ArrowResultConfig arrowConfig) {
+    resultSetSchema = logicalPlan->getSchema();
     auto root = mapOperator(logicalPlan->getLastOperator().get());
+    resultSetSchema = nullptr;
     if (!root->isSink()) {
         if (resultType == main::QueryResultType::ARROW) {
             root = createArrowResultCollector(arrowConfig, expressions, logicalPlan->getSchema(),

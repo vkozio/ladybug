@@ -258,10 +258,16 @@ public:
     ExecutionContext* executionContext;
     main::ClientContext* clientContext;
 
+    const planner::Schema* getScopeSchemaForChild() const { return scopeSchemaForChild; }
+    const planner::Schema* getResultSetSchema() const { return resultSetSchema; }
+
 private:
+    void setScopeSchemaForChild(const planner::Schema* s) { scopeSchemaForChild = s; }
     std::unordered_map<const planner::LogicalOperator*, PhysicalOperator*> logicalOpToPhysicalOpMap;
     physical_op_id physicalOperatorID;
     std::vector<extension::MapperExtension*> mapperExtensions;
+    const planner::Schema* scopeSchemaForChild = nullptr;
+    const planner::Schema* resultSetSchema = nullptr;
 };
 
 } // namespace processor
