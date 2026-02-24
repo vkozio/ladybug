@@ -54,7 +54,8 @@ const initTests = async () => {
   const tmpPath = await fs.mkdtemp(path.join(os.tmpdir(), "lbug-"));
   const dbPath = path.join(tmpPath, "db.kz");
   const db = new lbug.Database(dbPath, 1 << 28 /* 256MB */);
-  const conn = new lbug.Connection(db, 4);
+  // Single thread so COPY runs single-producer and avoids duplicate PK in node_batch_insert.
+  const conn = new lbug.Connection(db, 1);
   const tinysnbDir = "../../dataset/tinysnb/";
 
   const schema = (await fs.readFile(tinysnbDir + "schema.cypher"))
@@ -67,13 +68,16 @@ const initTests = async () => {
     await conn.query(line);
   }
 
+  global.dbPath = dbPath;
+  global.tmpPath = tmpPath;
+  global.db = db;
+  global.conn = conn;
+
   const copy = (await fs.readFile(tinysnbDir + "copy.cypher"))
     .toString()
     .split("\n");
-
   const dataFileExtension = ["csv", "parquet", "npy", "ttl", "nq", "json", "lbug_extension"];
   const dataFileRegex = new RegExp(`"([^"]+\\.(${dataFileExtension.join("|")}))"`, "gi");
-
   for (const line of copy) {
     if (!line || line.trim().length === 0) {
       continue;
@@ -88,11 +92,6 @@ const initTests = async () => {
   await conn.query(
     'copy moviesSerial from "../../dataset/tinysnb-serial/vMovies.csv"'
   );
-
-  global.dbPath = dbPath;
-  global.tmpPath = tmpPath;
-  global.db = db;
-  global.conn = conn;
 };
 
 global.initTests = initTests;
