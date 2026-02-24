@@ -8,7 +8,9 @@ namespace common {
 
 class LBUG_API CopyException : public Exception {
 public:
-    explicit CopyException(const std::string& msg) : Exception("Copy exception: " + msg){};
+    explicit CopyException(const std::string& msg)
+        : Exception("Copy exception: " + msg,
+              true /* skipBacktrace: often caught and rethrown */){};
 };
 
 } // namespace common
