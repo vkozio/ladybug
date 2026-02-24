@@ -1,7 +1,10 @@
 #include "binder/expression_visitor.h"
+#include "binder/query/reading_clause/bound_call_subquery.h"
 #include "binder/query/reading_clause/bound_load_from.h"
 #include "binder/query/reading_clause/bound_match_clause.h"
 #include "binder/query/reading_clause/bound_table_function_call.h"
+#include "planner/operator/logical_call_subquery.h"
+#include "planner/operator/scan/logical_scope_scan.h"
 #include "planner/planner.h"
 
 using namespace lbug::binder;
@@ -20,6 +23,9 @@ void Planner::planReadingClause(const BoundReadingClause& readingClause, Logical
     } break;
     case ClauseType::TABLE_FUNCTION_CALL: {
         planTableFunctionCall(readingClause, plan);
+    } break;
+    case ClauseType::CALL_SUBQUERY: {
+        planCallSubquery(readingClause, plan);
     } break;
     case ClauseType::LOAD_FROM: {
         planLoadFrom(readingClause, plan);
@@ -98,6 +104,25 @@ public:
 private:
     std::unordered_set<std::string> columnNameSet;
 };
+
+void Planner::planCallSubquery(const BoundReadingClause& readingClause, LogicalPlan& plan) {
+    if (plan.isEmpty()) {
+        appendDummyScan(plan);
+    }
+    auto& boundCall = readingClause.constCast<BoundCallSubquery>();
+    auto outerOp = plan.getLastOperator();
+    auto innerPlan = planSingleQuery(boundCall.getInnerQuery());
+    KU_ASSERT(!innerPlan.isEmpty());
+    auto innerRoot = innerPlan.getLastOperator();
+    if (!boundCall.getScopeExpressions().empty()) {
+        auto scopeScan = std::make_shared<LogicalScopeScan>(boundCall.getScopeExpressions());
+        scopeScan->addChild(innerRoot);
+        innerRoot = scopeScan;
+    }
+    auto op = std::make_shared<LogicalCallSubquery>(std::move(outerOp), innerRoot,
+        boundCall.getScopeExpressions());
+    plan.setLastOperator(std::move(op));
+}
 
 void Planner::planTableFunctionCall(const BoundReadingClause& readingClause, LogicalPlan& plan) {
     auto& boundCall = readingClause.constCast<BoundTableFunctionCall>();

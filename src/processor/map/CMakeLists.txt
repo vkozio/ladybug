@@ -5,6 +5,7 @@ add_library(lbug_processor_mapper
         create_result_collector.cpp
         expression_mapper.cpp
         map_acc_hash_join.cpp
+        map_call_subquery.cpp
         map_accumulate.cpp
         map_aggregate.cpp
         map_count_rel_table.cpp
@@ -39,6 +40,7 @@ add_library(lbug_processor_mapper
         map_projection.cpp
         map_recursive_extend.cpp
         map_scan_node_table.cpp
+        map_scope_scan.cpp
         map_semi_masker.cpp
         map_set.cpp
         map_simple.cpp

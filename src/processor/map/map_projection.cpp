@@ -12,7 +12,9 @@ std::unique_ptr<PhysicalOperator> PlanMapper::mapProjection(
     const LogicalOperator* logicalOperator) {
     auto& logicalProjection = logicalOperator->constCast<LogicalProjection>();
     auto outSchema = logicalProjection.getSchema();
-    auto inSchema = logicalProjection.getChild(0)->getSchema();
+    auto childSchema = logicalProjection.getChild(0)->getSchema();
+    const Schema* inSchema =
+        (getScopeSchemaForChild() != nullptr) ? getScopeSchemaForChild() : childSchema;
     auto prevOperator = mapOperator(logicalOperator->getChild(0).get());
     auto printInfo =
         std::make_unique<ProjectionPrintInfo>(logicalProjection.getExpressionsToProject());

@@ -18,6 +18,8 @@ std::string LogicalOperatorUtils::logicalOperatorTypeToString(LogicalOperatorTyp
         return "ALTER";
     case LogicalOperatorType::ATTACH_DATABASE:
         return "ATTACH_DATABASE";
+    case LogicalOperatorType::CALL_SUBQUERY:
+        return "CALL_SUBQUERY";
     case LogicalOperatorType::COPY_FROM:
         return "COPY_FROM";
     case LogicalOperatorType::COPY_TO:
@@ -92,6 +94,8 @@ std::string LogicalOperatorUtils::logicalOperatorTypeToString(LogicalOperatorTyp
         return "RECURSIVE_EXTEND";
     case LogicalOperatorType::SCAN_NODE_TABLE:
         return "SCAN_NODE_TABLE";
+    case LogicalOperatorType::SCOPE_SCAN:
+        return "SCOPE_SCAN";
     case LogicalOperatorType::SEMI_MASKER:
         return "SEMI_MASKER";
     case LogicalOperatorType::SET_PROPERTY:

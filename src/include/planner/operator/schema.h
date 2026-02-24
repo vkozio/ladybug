@@ -90,6 +90,10 @@ public:
 
     f_group_pos getGroupPos(const std::string& expressionName) const;
 
+    bool containsExpression(const std::string& expressionName) const {
+        return expressionNameToGroupPos.contains(expressionName);
+    }
+
     std::pair<f_group_pos, uint32_t> getExpressionPos(const binder::Expression& expression) const {
         auto groupPos = getGroupPos(expression);
         return std::make_pair(groupPos, groups[groupPos]->getExpressionPos(expression));

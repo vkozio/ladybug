@@ -25,6 +25,8 @@ std::string PhysicalOperatorUtils::operatorTypeToString(PhysicalOperatorType ope
         return "ATTACH_DATABASE";
     case PhysicalOperatorType::BATCH_INSERT:
         return "BATCH_INSERT";
+    case PhysicalOperatorType::CALL_SUBQUERY:
+        return "CALL_SUBQUERY";
     case PhysicalOperatorType::COPY_TO:
         return "COPY_TO";
     case PhysicalOperatorType::COUNT_REL_TABLE:
@@ -101,6 +103,8 @@ std::string PhysicalOperatorUtils::operatorTypeToString(PhysicalOperatorType ope
         return "SCAN_NODE_TABLE";
     case PhysicalOperatorType::SCAN_REL_TABLE:
         return "SCAN_REL_TABLE";
+    case PhysicalOperatorType::SCOPE_SCAN:
+        return "SCOPE_SCAN";
     case PhysicalOperatorType::SEMI_MASKER:
         return "SEMI_MASKER";
     case PhysicalOperatorType::SET_PROPERTY:

@@ -153,6 +153,12 @@ protected:
         return op;
     }
 
+    virtual void visitScopeScan(planner::LogicalOperator* /*op*/) {}
+    virtual std::shared_ptr<planner::LogicalOperator> visitScopeScanReplace(
+        std::shared_ptr<planner::LogicalOperator> op) {
+        return op;
+    }
+
     virtual void visitSetProperty(planner::LogicalOperator*) {}
     virtual std::shared_ptr<planner::LogicalOperator> visitSetPropertyReplace(
         std::shared_ptr<planner::LogicalOperator> op) {
@@ -161,6 +167,12 @@ protected:
 
     virtual void visitTableFunctionCall(planner::LogicalOperator*) {}
     virtual std::shared_ptr<planner::LogicalOperator> visitTableFunctionCallReplace(
+        std::shared_ptr<planner::LogicalOperator> op) {
+        return op;
+    }
+
+    virtual void visitCallSubquery(planner::LogicalOperator*) {}
+    virtual std::shared_ptr<planner::LogicalOperator> visitCallSubqueryReplace(
         std::shared_ptr<planner::LogicalOperator> op) {
         return op;
     }

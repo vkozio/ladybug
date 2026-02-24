@@ -18,7 +18,7 @@ f_group_pos Schema::createGroup() {
 void Schema::insertToScope(const std::shared_ptr<Expression>& expression, f_group_pos groupPos) {
     KU_ASSERT(!expressionNameToGroupPos.contains(expression->getUniqueName()));
     expressionNameToGroupPos.insert({expression->getUniqueName(), groupPos});
-    KU_ASSERT(getGroup(groupPos)->expressionNameToPos.contains(expression->getUniqueName()));
+    // insertToScope does not add to the group's expressionNameToPos (unlike insertToGroupAndScope)
     expressionsInScope.push_back(expression);
 }
 
@@ -53,8 +53,12 @@ void Schema::insertToGroupAndScope(const expression_vector& expressions, f_group
 }
 
 f_group_pos Schema::getGroupPos(const std::string& expressionName) const {
-    KU_ASSERT(expressionNameToGroupPos.contains(expressionName));
-    return expressionNameToGroupPos.at(expressionName);
+    auto it = expressionNameToGroupPos.find(expressionName);
+    if (it == expressionNameToGroupPos.end()) {
+        throw InternalException(std::format(
+            "Schema: expression '{}' not in scope (CALL subquery scope lookup).", expressionName));
+    }
+    return it->second;
 }
 
 bool Schema::isExpressionInScope(const Expression& expression) const {

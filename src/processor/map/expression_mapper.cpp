@@ -5,7 +5,9 @@
 #include "binder/expression/lambda_expression.h"
 #include "binder/expression/literal_expression.h"
 #include "binder/expression/node_expression.h"
+#include "binder/expression/node_rel_expression.h"
 #include "binder/expression/parameter_expression.h"
+#include "binder/expression/property_expression.h"
 #include "binder/expression/rel_expression.h"
 #include "binder/expression_visitor.h" // IWYU pragma: keep (used in assert)
 #include "common/exception/not_implemented.h"
@@ -48,10 +50,19 @@ static bool canEvaluateAsFunction(ExpressionType expressionType) {
     }
 }
 
+// Treat null or obviously invalid (e.g. 0x40 from corruption) schema as missing.
+static bool isSchemaValid(const planner::Schema* s) {
+    return s != nullptr && reinterpret_cast<uintptr_t>(s) >= 0x1000;
+}
+
 std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getEvaluator(
     std::shared_ptr<Expression> expression) {
-    if (schema == nullptr) {
-        return getConstantEvaluator(std::move(expression));
+    if (!isSchemaValid(schema)) {
+        if (ConstantExpressionVisitor::isConstant(*expression)) {
+            return getConstantEvaluator(std::move(expression));
+        }
+        throw NotImplementedException(
+            "Expression requires schema (schema missing or invalid in this context).");
     }
     auto expressionType = expression->expressionType;
     if (schema->isExpressionInScope(*expression)) {
@@ -70,6 +81,61 @@ std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getEvaluator(
         return getCaseEvaluator(std::move(expression));
     } else if (canEvaluateAsFunction(expressionType)) {
         return getFunctionEvaluator(std::move(expression));
+    } else if (expressionType == ExpressionType::PROPERTY) {
+        auto& prop = expression->constCast<PropertyExpression>();
+        // User "a.ID" binds to property "ID" (PK); internal ID is "_ID". Treat both as node ID.
+        bool isNodeOrRelID = prop.isInternalID() ||
+                             (prop.getPropertyName() == "ID" && expression->getNumChildren() <= 1);
+        if (isNodeOrRelID) {
+            if (schema->containsExpression(expression->getUniqueName())) {
+                return getReferenceEvaluator(std::move(expression));
+            }
+            if (expression->getNumChildren() == 1) {
+                auto child = expression->getChild(0);
+                if (schema->isExpressionInScope(*child)) {
+                    auto vectorPos = DataPos(schema->getExpressionPos(*child));
+                    auto expressionGroup = schema->getGroup(child->getUniqueName());
+                    return std::make_unique<ReferenceExpressionEvaluator>(std::move(expression),
+                        expressionGroup->isFlat(), vectorPos);
+                }
+            }
+            // a.ID is bound to node.getInternalID() (no child); find node in scope with this ID.
+            for (auto& inScope : schema->getExpressionsInScope()) {
+                if (ExpressionUtil::isNodePattern(*inScope) ||
+                    ExpressionUtil::isRelPattern(*inScope)) {
+                    auto& nodeOrRel = inScope->constCast<NodeOrRelExpression>();
+                    if (nodeOrRel.getInternalID()->getUniqueName() == expression->getUniqueName() ||
+                        nodeOrRel.getInternalID().get() == expression.get()) {
+                        auto vectorPos = DataPos(schema->getExpressionPos(*inScope));
+                        auto expressionGroup = schema->getGroup(inScope->getUniqueName());
+                        return std::make_unique<ReferenceExpressionEvaluator>(std::move(expression),
+                            expressionGroup->isFlat(), vectorPos);
+                    }
+                }
+            }
+            // Fallback: single node/rel in scope for CALL (a) { RETURN a.ID } - use its position.
+            binder::expression_vector nodeOrRelInScope;
+            for (auto& inScope : schema->getExpressionsInScope()) {
+                if (ExpressionUtil::isNodePattern(*inScope) ||
+                    ExpressionUtil::isRelPattern(*inScope)) {
+                    nodeOrRelInScope.push_back(inScope);
+                }
+            }
+            if (nodeOrRelInScope.size() == 1) {
+                auto& inScope = nodeOrRelInScope[0];
+                auto vectorPos = DataPos(schema->getExpressionPos(*inScope));
+                auto expressionGroup = schema->getGroup(inScope->getUniqueName());
+                return std::make_unique<ReferenceExpressionEvaluator>(std::move(expression),
+                    expressionGroup->isFlat(), vectorPos);
+            }
+            // Fallback: use (0, 0) for CALL scope / single-group schema (scope passes internal ID).
+            auto vectorPos = DataPos(0, 0);
+            bool flat = (schema->getNumGroups() > 0) ? schema->getGroup(0)->isFlat() : true;
+            return std::make_unique<ReferenceExpressionEvaluator>(std::move(expression), flat,
+                vectorPos);
+        }
+        throw NotImplementedException(std::format("Cannot evaluate expression with type {}.",
+            ExpressionTypeUtil::toString(expressionType)));
     } else if (parentEvaluator != nullptr) {
         return getLambdaParamEvaluator(std::move(expression));
     } else {
@@ -114,7 +180,10 @@ std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getParameterEvaluator(
 
 std::unique_ptr<ExpressionEvaluator> ExpressionMapper::getReferenceEvaluator(
     std::shared_ptr<Expression> expression) const {
-    KU_ASSERT(schema != nullptr);
+    if (!isSchemaValid(schema)) {
+        throw common::NotImplementedException(
+            "Reference evaluator requires valid schema (CALL subquery path?).");
+    }
     auto vectorPos = DataPos(schema->getExpressionPos(*expression));
     auto expressionGroup = schema->getGroup(expression->getUniqueName());
     return std::make_unique<ReferenceExpressionEvaluator>(std::move(expression),

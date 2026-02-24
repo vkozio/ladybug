@@ -24,7 +24,9 @@ PlanMapper::PlanMapper(ExecutionContext* executionContext)
 std::unique_ptr<PhysicalPlan> PlanMapper::getPhysicalPlan(const LogicalPlan* logicalPlan,
     const expression_vector& expressions, main::QueryResultType resultType,
     ArrowResultConfig arrowConfig) {
+    resultSetSchema = logicalPlan->getSchema();
     auto root = mapOperator(logicalPlan->getLastOperator().get());
+    resultSetSchema = nullptr;
     if (!root->isSink()) {
         if (resultType == main::QueryResultType::ARROW) {
             root = createArrowResultCollector(arrowConfig, expressions, logicalPlan->getSchema(),
@@ -55,6 +57,9 @@ std::unique_ptr<PhysicalOperator> PlanMapper::mapOperator(const LogicalOperator*
     } break;
     case LogicalOperatorType::ATTACH_DATABASE: {
         physicalOperator = mapAttachDatabase(logicalOperator);
+    } break;
+    case LogicalOperatorType::CALL_SUBQUERY: {
+        physicalOperator = mapCallSubquery(logicalOperator);
     } break;
     case LogicalOperatorType::COPY_FROM: {
         physicalOperator = mapCopyFrom(logicalOperator);
@@ -169,6 +174,9 @@ std::unique_ptr<PhysicalOperator> PlanMapper::mapOperator(const LogicalOperator*
     } break;
     case LogicalOperatorType::SCAN_NODE_TABLE: {
         physicalOperator = mapScanNodeTable(logicalOperator);
+    } break;
+    case LogicalOperatorType::SCOPE_SCAN: {
+        physicalOperator = mapScopeScan(logicalOperator);
     } break;
     case LogicalOperatorType::SEMI_MASKER: {
         physicalOperator = mapSemiMasker(logicalOperator);

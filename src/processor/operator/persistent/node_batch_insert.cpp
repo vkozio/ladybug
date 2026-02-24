@@ -240,7 +240,16 @@ void NodeBatchInsert::appendIncompleteNodeGroup(transaction::Transaction* transa
     const auto nodeLocalState = ku_dynamic_cast<NodeBatchInsertLocalState*>(localState.get());
     const auto nodeSharedState = ku_dynamic_cast<NodeBatchInsertSharedState*>(sharedState.get());
     if (!nodeSharedState->sharedNodeGroup) {
-        nodeSharedState->sharedNodeGroup = std::move(localNodeGroup);
+        if (indexBuilder && localNodeGroup->getNumRows() > 0) {
+            // Write incomplete group via this thread's clone so it is flushed in finishedProducing.
+            // Do not leave in sharedNodeGroup: finalize would write it again with
+            // globalIndexBuilder (duplicate PK), or another thread could merge and produce
+            // duplicate keys if the source gives overlapping rows.
+            writeAndResetNodeGroup(transaction, localNodeGroup, indexBuilder, mm,
+                *nodeLocalState->optimisticAllocator);
+        } else {
+            nodeSharedState->sharedNodeGroup = std::move(localNodeGroup);
+        }
         return;
     }
     uint64_t numNodesAppended = 0;

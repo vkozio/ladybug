@@ -76,11 +76,17 @@ void LogicalOperatorVisitor::visitOperatorSwitch(LogicalOperator* op) {
     case LogicalOperatorType::SCAN_NODE_TABLE: {
         visitScanNodeTable(op);
     } break;
+    case LogicalOperatorType::SCOPE_SCAN: {
+        visitScopeScan(op);
+    } break;
     case LogicalOperatorType::SET_PROPERTY: {
         visitSetProperty(op);
     } break;
     case LogicalOperatorType::TABLE_FUNCTION_CALL: {
         visitTableFunctionCall(op);
+    } break;
+    case LogicalOperatorType::CALL_SUBQUERY: {
+        visitCallSubquery(op);
     } break;
     case LogicalOperatorType::UNION_ALL: {
         visitUnion(op);
@@ -168,11 +174,17 @@ std::shared_ptr<LogicalOperator> LogicalOperatorVisitor::visitOperatorReplaceSwi
     case LogicalOperatorType::SCAN_NODE_TABLE: {
         return visitScanNodeTableReplace(op);
     }
+    case LogicalOperatorType::SCOPE_SCAN: {
+        return visitScopeScanReplace(op);
+    }
     case LogicalOperatorType::SET_PROPERTY: {
         return visitSetPropertyReplace(op);
     }
     case LogicalOperatorType::TABLE_FUNCTION_CALL: {
         return visitTableFunctionCallReplace(op);
+    }
+    case LogicalOperatorType::CALL_SUBQUERY: {
+        return visitCallSubqueryReplace(op);
     }
     case LogicalOperatorType::UNION_ALL: {
         return visitUnionReplace(op);

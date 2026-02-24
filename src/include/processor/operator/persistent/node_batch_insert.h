@@ -38,16 +38,18 @@ private:
 struct NodeBatchInsertInfo final : BatchInsertInfo {
     evaluator::evaluator_vector_t columnEvaluators;
     std::vector<common::ColumnEvaluateType> evaluateTypes;
+    bool hasSerialPK = false;
 
     NodeBatchInsertInfo(std::string tableName, std::vector<common::LogicalType> warningColumnTypes,
         std::vector<std::unique_ptr<evaluator::ExpressionEvaluator>> columnEvaluators,
-        std::vector<common::ColumnEvaluateType> evaluateTypes)
+        std::vector<common::ColumnEvaluateType> evaluateTypes, bool hasSerialPK = false)
         : BatchInsertInfo{std::move(tableName), std::move(warningColumnTypes)},
-          columnEvaluators{std::move(columnEvaluators)}, evaluateTypes{std::move(evaluateTypes)} {}
+          columnEvaluators{std::move(columnEvaluators)}, evaluateTypes{std::move(evaluateTypes)},
+          hasSerialPK{hasSerialPK} {}
 
     NodeBatchInsertInfo(const NodeBatchInsertInfo& other)
         : BatchInsertInfo{other}, columnEvaluators{copyVector(other.columnEvaluators)},
-          evaluateTypes{other.evaluateTypes} {}
+          evaluateTypes{other.evaluateTypes}, hasSerialPK{other.hasSerialPK} {}
 
     std::unique_ptr<BatchInsertInfo> copy() const override {
         return std::make_unique<NodeBatchInsertInfo>(*this);
@@ -113,6 +115,10 @@ public:
         return std::make_unique<NodeBatchInsert>(info->copy(), sharedState, children[0]->copy(), id,
             printInfo->copy());
     }
+
+    // Single-threaded when PK is SERIAL so nextval produces unique values without race between
+    // multiple producers pushing to the same index builder queues.
+    bool isParallel() const override { return !info->ptrCast<NodeBatchInsertInfo>()->hasSerialPK; }
 
     // The node group will be reset so that the only values remaining are the ones which were
     // not written

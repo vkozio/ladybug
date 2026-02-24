@@ -21,6 +21,7 @@ enum class PhysicalOperatorType : uint8_t {
     AGGREGATE_SCAN,
     ATTACH_DATABASE,
     BATCH_INSERT,
+    CALL_SUBQUERY,
     COPY_TO,
     COUNT_REL_TABLE,
     CREATE_GRAPH,
@@ -60,6 +61,7 @@ enum class PhysicalOperatorType : uint8_t {
     RESULT_COLLECTOR,
     SCAN_NODE_TABLE,
     SCAN_REL_TABLE,
+    SCOPE_SCAN,
     SEMI_MASKER,
     SET_PROPERTY,
     SKIP,
@@ -127,9 +129,9 @@ public:
     std::unique_ptr<PhysicalOperator> moveUnaryChild();
 
     // Global state is initialized once.
-    void initGlobalState(ExecutionContext* context);
+    virtual void initGlobalState(ExecutionContext* context);
     // Local state is initialized for each thread.
-    void initLocalState(ResultSet* resultSet, ExecutionContext* context);
+    virtual void initLocalState(ResultSet* resultSet, ExecutionContext* context);
 
     bool getNextTuple(ExecutionContext* context);
 

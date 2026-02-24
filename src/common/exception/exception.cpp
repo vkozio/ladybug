@@ -13,5 +13,14 @@ Exception::Exception(std::string msg) : exception(), exception_message_(std::mov
 #endif
 }
 
+Exception::Exception(std::string msg, bool skipBacktrace)
+    : exception(), exception_message_(std::move(msg)) {
+#ifdef LBUG_BACKTRACE
+    if (!skipBacktrace) {
+        cpptrace::generate_trace(1 /*skip this function's frame*/).print();
+    }
+#endif
+}
+
 } // namespace common
 } // namespace lbug
