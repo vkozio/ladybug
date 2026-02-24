@@ -1,4 +1,5 @@
 #include "catalog/catalog.h"
+#include "catalog/catalog_entry/node_table_catalog_entry.h"
 #include "catalog/catalog_entry/rel_group_catalog_entry.h"
 #include "planner/operator/logical_partitioner.h"
 #include "planner/operator/persistent/logical_copy_from.h"
@@ -64,9 +65,26 @@ std::unique_ptr<PhysicalOperator> PlanMapper::mapCopyNodeFrom(
     for (auto& column : copyFromInfo->getWarningColumns()) {
         warningColumnTypes.push_back(column->getDataType().copy());
     }
+    bool hasSerialPK = false;
+    {
+        const auto catalog = Catalog::Get(*clientContext);
+        const auto transaction = transaction::Transaction::Get(*clientContext);
+        if (catalog->containsTable(transaction, copyFromInfo->tableName)) {
+            const auto nodeTableEntry =
+                catalog->getTableCatalogEntry(transaction, copyFromInfo->tableName)
+                    ->ptrCast<NodeTableCatalogEntry>();
+            hasSerialPK = nodeTableEntry->getPrimaryKeyDefinition().getType().getLogicalTypeID() ==
+                          LogicalTypeID::SERIAL;
+        } else if (!copyFromInfo->columnEvaluateTypes.empty() &&
+                   copyFromInfo->columnEvaluateTypes[0] == common::ColumnEvaluateType::DEFAULT) {
+            // Table may not be visible yet (e.g. same transaction). First column with DEFAULT is
+            // typically SERIAL PK for node COPY; treat as serial to avoid parallel duplicate keys.
+            hasSerialPK = true;
+        }
+    }
     auto info = std::make_unique<NodeBatchInsertInfo>(copyFromInfo->tableName,
         std::move(warningColumnTypes), std::move(columnEvaluators),
-        copyFromInfo->columnEvaluateTypes);
+        copyFromInfo->columnEvaluateTypes, hasSerialPK);
     auto printInfo = std::make_unique<NodeBatchInsertPrintInfo>(copyFromInfo->tableName);
     auto batchInsert = std::make_unique<NodeBatchInsert>(std::move(info), std::move(sharedState),
         std::move(prevOperator), getOperatorID(), std::move(printInfo));

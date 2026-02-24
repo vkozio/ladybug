@@ -147,8 +147,8 @@ void IndexBuilder::insert(const ColumnChunkData& chunk,
         for (auto i = 0u; i < numNodes; i++) {
             if (checkNonNullConstraint(chunk, warningData, nodeOffset, i, errorHandler)) {
                 auto value = chunk.getValue<int64_t>(i);
-                localBuffers.insert(value, nodeOffset + i,
-                    getWarningDataFromChunks(warningData, i), errorHandler);
+                localBuffers.insert(value, nodeOffset + i, getWarningDataFromChunks(warningData, i),
+                    errorHandler);
             }
         }
         return;
