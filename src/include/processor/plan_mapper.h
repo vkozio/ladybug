@@ -148,6 +148,7 @@ public:
         const planner::LogicalOperator* logicalOperator);
     std::unique_ptr<PhysicalOperator> mapScanNodeTable(
         const planner::LogicalOperator* logicalOperator);
+    std::unique_ptr<PhysicalOperator> mapScopeScan(const planner::LogicalOperator* logicalOperator);
     std::unique_ptr<PhysicalOperator> mapSemiMasker(
         const planner::LogicalOperator* logicalOperator);
     std::unique_ptr<PhysicalOperator> mapSetProperty(
@@ -159,6 +160,8 @@ public:
     std::unique_ptr<PhysicalOperator> mapStandaloneCall(
         const planner::LogicalOperator* logicalOperator);
     std::unique_ptr<PhysicalOperator> mapTableFunctionCall(
+        const planner::LogicalOperator* logicalOperator);
+    std::unique_ptr<PhysicalOperator> mapCallSubquery(
         const planner::LogicalOperator* logicalOperator);
     std::unique_ptr<PhysicalOperator> mapTransaction(
         const planner::LogicalOperator* logicalOperator);
@@ -185,7 +188,7 @@ public:
     std::unique_ptr<PhysicalOperator> createFTableScan(const binder::expression_vector& exprs,
         std::vector<ft_col_idx_t> colIndices, const planner::Schema* schema,
         std::shared_ptr<FactorizedTable> table, uint64_t maxMorselSize,
-        physical_op_vector_t children);
+        physical_op_vector_t children, bool shareStateAcrossClones = false);
     // Scan is the leaf operator of physical plan.
     std::unique_ptr<PhysicalOperator> createFTableScan(const binder::expression_vector& exprs,
         const std::vector<ft_col_idx_t>& colIndices, const planner::Schema* schema,
@@ -255,10 +258,16 @@ public:
     ExecutionContext* executionContext;
     main::ClientContext* clientContext;
 
+    const planner::Schema* getScopeSchemaForChild() const { return scopeSchemaForChild; }
+    const planner::Schema* getResultSetSchema() const { return resultSetSchema; }
+
 private:
+    void setScopeSchemaForChild(const planner::Schema* s) { scopeSchemaForChild = s; }
     std::unordered_map<const planner::LogicalOperator*, PhysicalOperator*> logicalOpToPhysicalOpMap;
     physical_op_id physicalOperatorID;
     std::vector<extension::MapperExtension*> mapperExtensions;
+    const planner::Schema* scopeSchemaForChild = nullptr;
+    const planner::Schema* resultSetSchema = nullptr;
 };
 
 } // namespace processor

@@ -112,8 +112,10 @@ std::unique_ptr<PhysicalOperator> TableFunction::getPhysicalPlan(PlanMapper* pla
     auto desc = call.getBindData()->getDescription();
     auto printInfo = std::make_unique<TableFunctionCallPrintInfo>(
         desc.empty() ? call.getTableFunc().name : desc, printExprs);
+    const bool shareStateAcrossClones = (info.bindData->numRows <= 1);
     return std::make_unique<TableFunctionCall>(std::move(info), sharedState,
-        planMapper->getOperatorID(), std::move(printInfo));
+        planMapper->getOperatorID(), std::move(printInfo), false /* cloneUsesFreshSharedState */,
+        shareStateAcrossClones);
 }
 
 offset_t TableFunction::emptyTableFunc(const TableFuncInput&, TableFuncOutput&) {

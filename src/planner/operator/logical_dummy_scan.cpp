@@ -10,12 +10,14 @@ namespace planner {
 
 void LogicalDummyScan::computeFactorizedSchema() {
     createEmptySchema();
-    schema->createGroup();
+    auto groupPos = schema->createGroup();
+    schema->setGroupAsSingleState(groupPos);
 }
 
 void LogicalDummyScan::computeFlatSchema() {
     createEmptySchema();
-    schema->createGroup();
+    auto groupPos = schema->createGroup();
+    schema->setGroupAsSingleState(groupPos);
 }
 
 std::shared_ptr<binder::Expression> LogicalDummyScan::getDummyExpression() {

@@ -46,7 +46,23 @@ void ResultCollector::initLocalStateInternal(ResultSet* resultSet, ExecutionCont
 void ResultCollector::executeInternal(ExecutionContext* context) {
     while (children[0]->getNextTuple(context)) {
         if (!payloadVectors.empty()) {
-            for (auto i = 0u; i < resultSet->multiplicity; i++) {
+            // In most pipelines, multiplicity reflects how many logical rows each tuple
+            // represents and needs to be materialized. However, for result sets where all
+            // payload vectors are flat single-state (e.g. constant projections or single-row
+            // table functions), the payload already corresponds to exactly one logical row,
+            // and applying multiplicity here would artificially inflate the row count.
+            bool useMultiplicity = true;
+            if (resultSet->multiplicity > 1) {
+                useMultiplicity = false;
+                for (auto* vec : payloadVectors) {
+                    if (!vec->state->isFlat() || vec->state->getSelVector().getSelSize() != 1) {
+                        useMultiplicity = true;
+                        break;
+                    }
+                }
+            }
+            const auto repeatCount = useMultiplicity ? resultSet->multiplicity : 1;
+            for (auto i = 0u; i < repeatCount; i++) {
                 localTable->append(payloadAndMarkVectors);
             }
         }
